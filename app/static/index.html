@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unit42-FirmwareX · Firmware Security Analysis</title>
+<style>
+:root{--orange:#b5651d;--orange-d:#8f4a12;--ink:#2e2219;--muted:#8a7664;--line:#e6d8c5;--bg:#f4ece1;--card:#fffaf3;
+--crit:#8c1c1c;--high:#c2570c;--med:#b07d10;--low:#5f7f4f;--info:#8a7664;--good:#4f7a3f;--bad:#b0432f;
+--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,"Segoe UI",system-ui,-apple-system,sans-serif}
+button,input,select{font:inherit}
+header{background:var(--card);border-top:5px solid var(--orange);border-bottom:1px solid var(--line);padding:0 28px;height:68px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:10px;background:var(--orange);color:#fff;display:grid;place-items:center;font-weight:900;font-size:13px}
+.brand b{display:block;font-size:16px}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:1.3px;font-weight:700}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:99px;background:#efe3d2;font-size:11px;font-weight:700;color:#5c4a3a}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+main{max-width:1500px;margin:0 auto;padding:24px 28px 40px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(20,30,50,.04)}
+.pad{padding:18px}
+h2{font-size:15px;margin:0 0 4px}h3{font-size:13px;margin:0 0 10px}
+.kicker{font-size:10px;font-weight:800;letter-spacing:1.3px;color:var(--orange-d);text-transform:uppercase}
+.muted{color:var(--muted)}.small{font-size:12px}
+.notice{background:#f7ecd9;border:1px solid #e3cfa8;border-left:4px solid var(--orange);border-radius:8px;padding:10px 12px;font-size:12px;color:#6b4f2a;margin-top:12px}
+.drop{margin-top:12px;border:1.5px dashed #d6c2a8;border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:#fbf5ea;position:relative}
+.drop:hover,.drop.over{border-color:var(--orange);background:#fbf1e2}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.drop b{display:block}.chk{display:flex;gap:8px;align-items:flex-start;margin:12px 0;font-size:12px;color:#5c4a3a}
+.btn{border:0;border-radius:8px;padding:9px 14px;font-weight:700;font-size:12px;cursor:pointer;transition:.15s}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--orange);color:#fff;width:100%}.btn.primary:hover:not(:disabled){background:var(--orange-d)}
+.btn.soft{background:#f6e6d2;color:#6b3a14;width:100%;margin-top:8px}
+.btn.quiet{background:var(--card);border:1px solid var(--line);color:#5c4a3a}
+.jobs{display:grid;gap:8px;margin-top:10px;max-height:46vh;overflow:auto}
+.job{border:1px solid var(--line);border-radius:9px;padding:10px 12px;cursor:pointer;background:var(--card)}
+.job:hover{border-color:#d9b48a}.job.sel{border-color:var(--orange);background:#fbf1e2}
+.job .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.job .n{font-weight:700;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job .m{font-size:11px;color:var(--muted);margin-top:3px}
+.chip{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.s-complete{background:#e3ecd6;color:#3f6a2c}.s-running,.s-queued{background:#f6e8c4;color:#7a5410}.s-failed{background:#f8e0d8;color:#9b3a24}
+.r-critical{background:var(--crit);color:#fff}.r-high{background:#f4dcc4;color:var(--high)}.r-medium{background:#f6e8c4;color:var(--med)}
+.r-low{background:#e3ecd6;color:var(--low)}.r-info{background:#efe3d2;color:var(--info)}
+.t-done{background:#e3ecd6;color:#3f6a2c}.t-partial{background:#f6e8c4;color:#7a5410}.t-not_implemented{background:#efe3d2;color:#8a7664}
+.head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.head h2{font-size:18px;overflow-wrap:anywhere}
+.mono{font-family:var(--mono);font-size:11px;overflow-wrap:anywhere}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
+.stat{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbf5ea}
+.stat span{display:block;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.7px;text-transform:uppercase}
+.stat b{font-size:24px;letter-spacing:-.5px}
+.progress{height:8px;background:#eadfcf;border-radius:9px;overflow:hidden;margin:10px 0}.progress i{display:block;height:100%;background:var(--orange);transition:width .4s}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;margin-top:6px}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;font-weight:700;font-size:12px;color:#8a7664;cursor:pointer;white-space:nowrap}
+.tab.on{color:var(--orange-d);border-bottom-color:var(--orange)}
+.panel{display:none;padding-top:16px}.panel.on{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.bar{display:grid;grid-template-columns:110px 1fr 34px;gap:8px;align-items:center;font-size:12px;margin:6px 0}
+.bar div{height:10px;background:#efe3d2;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;border-radius:9px}
+.spark{display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:6px}.spark i{flex:1;background:#c98b4f;border-radius:2px 2px 0 0;min-height:2px}
+table{width:100%;border-collapse:collapse}th{font-size:10px;letter-spacing:.7px;color:#8a7664;text-align:left;padding:8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+td{padding:8px;border-bottom:1px solid #efe4d4;font-size:12px;vertical-align:top}
+.wrap{overflow:auto;max-height:62vh}
+.y{color:var(--good);font-weight:800}.n{color:var(--bad);font-weight:800}.u{color:#a8957f}
+.score{display:inline-flex;gap:2px}.score i{width:8px;height:12px;border-radius:2px;background:#e6d8c5}.score i.f{background:var(--good)}.score.low i.f{background:var(--bad)}.score.mid i.f{background:var(--med)}
+.tree details{margin-left:14px}.tree summary{cursor:pointer;padding:2px 0;font-weight:600;list-style:none}.tree summary::before{content:"▸ ";color:#a8957f}.tree details[open]>summary::before{content:"▾ "}
+.leaf{margin-left:30px;padding:2px 0;display:flex;gap:8px;align-items:center;cursor:default;font-size:12px;border-radius:5px}.leaf:hover{background:#f7efe2}
+.leaf .sz{color:var(--muted);font-size:11px}.tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:99px;background:#efe0c8;color:#6b4f2a}.tag.f{background:#f4dcc4;color:var(--high)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filters input,.filters select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--card);font-size:12px}
+.find{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--card)}
+.find summary{padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:center;list-style:none}.find summary::-webkit-details-marker{display:none}
+.find .ti{font-weight:700;font-size:13px;flex:1}.find .bd{padding:0 14px 14px;font-size:12px;color:#5c4a3a}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;margin:10px 0}.kv b{color:#8a7664;font-weight:700}
+.stage{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #efe4d4}.stage:last-child{border:0}.stage .d{flex:1}.stage small{color:var(--muted)}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+.toast{position:fixed;right:20px;bottom:20px;background:#3b2a20;color:#fff;padding:11px 15px;border-radius:9px;font-size:12px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;max-width:420px;z-index:9}
+.toast.on{opacity:1;transform:none}.toast.err{background:#a63a28}
+ul.lim{margin:0;padding-left:18px;color:#5c4a3a;font-size:12px}ul.lim li{margin:4px 0}
+
+header{background:linear-gradient(120deg,#3b2a20,#5a3d2b);border-top:5px solid #c98b4f;border-bottom:0;box-shadow:0 4px 14px rgba(59,42,32,.25)}
+.brand b{color:#f6e9d7}.brand small{color:#cdb596}.logo{background:linear-gradient(135deg,#c98b4f,#8f4a12)}
+.pill{background:rgba(255,255,255,.12);color:#f0e0c8}
+.card{box-shadow:0 8px 24px rgba(80,50,20,.07)}
+.btn.primary{background:linear-gradient(135deg,#b5651d,#8f4a12)}.btn.primary:hover:not(:disabled){background:#7a3f0e}
+.btn.quiet:hover:not(:disabled){border-color:var(--orange);color:var(--orange-d)}
+.stat{background:linear-gradient(180deg,#fffaf3,#f8efe1)}.stat b{color:#4a2f1c}
+.tab.on{color:#8f4a12;border-bottom-color:#b5651d}
+th{color:#8a7664}tr:hover td{background:#fbf3e6}
+.job.sel{box-shadow:inset 3px 0 0 #b5651d}
+.kicker{color:#a0561a}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:1000px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">FX</div><div><b>Unit42-FirmwareX</b><small>IoT FIRMWARE SECURITY LAB</small></div></div>
+  <span class="pill"><span class="dot"></span> LOCAL · STATIC ANALYSIS · NOTHING IS EXECUTED</span>
+</header>
+
+<main>
+<aside>
+  <section class="card pad">
+    <div class="kicker">New analysis</div><h2>Submit a firmware image</h2>
+    <div class="small muted">.bin .img .zip .tar .tar.gz .cpio SquashFS · max <span id="maxMb">100</span> MB</div>
+    <label class="drop" id="drop"><input type="file" id="file"><b id="dropLabel">Choose or drop a file</b><span class="small muted">Public / open-source images only</span></label>
+    <label class="chk"><input type="checkbox" id="auth"><span>I confirm this image is public/open-source or I am licensed to analyse it.</span></label>
+    <button class="btn primary" id="upload">Upload &amp; analyse</button>
+    <button class="btn soft" id="sample">Analyse built-in demo firmware</button>
+    <div class="notice">The demo image is <b>synthetic</b> (dummy ELF headers, fake credentials) so you can explore every view without downloading real firmware.</div>
+  </section>
+  <section class="card pad" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2>Firmware jobs</h2><button class="btn quiet" id="refresh">Refresh</button></div>
+    <div class="jobs" id="jobs"><div class="empty">No jobs yet.</div></div>
+  </section>
+</aside>
+
+<section class="card pad" id="detail">
+  <div class="empty" id="placeholder"><h2>No firmware selected</h2>Upload an image or run the demo to see the file tree, mitigation matrix and CWE-classified findings.</div>
+  <div id="content" style="display:none">
+    <div class="head">
+      <div><div class="kicker">Analysis report</div><h2 id="title"></h2><div class="mono muted" id="sha"></div></div>
+      <div class="toolbar"><span class="chip" id="statusChip"></span><button class="btn quiet" id="csv" disabled>Export CSV</button><button class="btn quiet" id="dl" disabled>Download JSON</button></div>
+    </div>
+    <div id="running" style="display:none"><div class="progress"><i id="bar" style="width:0"></i></div><div class="small muted" id="runMsg"></div></div>
+    <div id="done" style="display:none">
+      <div class="stats" id="stats"></div>
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-t="overview">Overview</button><button class="tab" data-t="tree">File tree</button>
+        <button class="tab" data-t="matrix">Mitigation matrix</button><button class="tab" data-t="findings">Findings</button>
+        <button class="tab" data-t="pipeline">Pipeline &amp; limits</button><button class="tab" data-t="audit">Audit log</button>
+      </div>
+      <div class="panel on" data-p="overview"></div>
+      <div class="panel" data-p="tree"></div>
+      <div class="panel" data-p="matrix"></div>
+      <div class="panel" data-p="findings"></div>
+      <div class="panel" data-p="pipeline"></div>
+      <div class="panel" data-p="audit"></div>
+    </div>
+  </div>
+</section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const RISKS=["critical","high","medium","low","info"];
+const RCOL={critical:"#9b1c31",high:"#d9480f",medium:"#d4a017",low:"#2f9e6e",info:"#8795a8"};
+const st={sel:null,report:null,tab:"overview",sort:{k:"hardening_score",d:1},fl:{risk:"",cat:"",q:""},timer:null};
+let tt;
+function toast(m,e){const t=$("#toast");t.textContent=m;t.className="toast on"+(e?" err":"");clearTimeout(tt);tt=setTimeout(()=>t.className="toast",4200)}
+async function api(u,o){const r=await fetch(u,o);let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d.detail||("Request failed ("+r.status+")"));return d}
+const fmt=n=>{n=+n||0;return n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB"};
+const when=v=>{const d=new Date(v);return isNaN(d)?"—":d.toLocaleString()};
+
+async function jobs(){
+  try{
+    const {firmware}=await api("/api/v1/firmware");
+    $("#jobs").innerHTML=firmware.length?firmware.map(j=>`<div class="job ${j.firmware_id===st.sel?"sel":""}" data-id="${esc(j.firmware_id)}">
+      <div class="t"><span class="n">${esc(j.filename)}</span><span class="chip s-${esc(j.status)}">${esc(j.status)}</span></div>
+      <div class="m">${fmt(j.size)}${j.is_sample?" · synthetic demo":""} · ${when(j.created_at)}</div></div>`).join(""):'<div class="empty">No jobs yet.</div>';
+    if(!st.sel&&firmware.length)select(firmware[0].firmware_id);
+    const cur=firmware.find(j=>j.firmware_id===st.sel);
+    if(cur&&(cur.status==="queued"||cur.status==="running")){showRunning(cur);schedule()}
+  }catch(e){toast(e.message,1)}
+}
+function schedule(){clearTimeout(st.timer);st.timer=setTimeout(()=>select(st.sel,true),1200)}
+async function select(id,poll){
+  st.sel=id;const j=await api("/api/v1/firmware/"+id);
+  $("#placeholder").style.display="none";$("#content").style.display="block";
+  $("#title").textContent=j.filename;$("#sha").textContent="SHA-256 "+j.sha256;
+  $("#statusChip").textContent=j.status;$("#statusChip").className="chip s-"+j.status;
+  if(j.status==="complete"){
+    $("#running").style.display="none";$("#done").style.display="block";$("#dl").disabled=false;$("#csv").disabled=false;
+    st.report=await api(`/api/v1/firmware/${id}/report`);renderAll();jobs();
+  }else if(j.status==="failed"){
+    $("#done").style.display="none";$("#running").style.display="block";$("#dl").disabled=true;$("#csv").disabled=true;
+    $("#bar").style.width="100%";$("#bar").style.background="#b0432f";$("#runMsg").textContent=j.error||"Analysis failed.";jobs();
+  }else{showRunning(j);schedule();if(!poll)jobs()}
+}
+function showRunning(j){$("#done").style.display="none";$("#running").style.display="block";$("#dl").disabled=true;$("#csv").disabled=true;
+  $("#bar").style.background="";$("#bar").style.width=j.progress+"%";$("#runMsg").textContent=`Stage: ${j.stage} · ${j.progress}%`}
+
+function renderAll(){const r=st.report,s=r.summary,hi=s.findings_by_risk;
+  $("#stats").innerHTML=[["Files",s.files],["ELF binaries",s.binaries],["Findings",s.findings],["Critical + High",hi.critical+hi.high],["Duration",s.duration_ms+" ms"]]
+   .map(([a,b])=>`<div class="stat"><span>${a}</span><b>${b}</b></div>`).join("");
+  overview();tree();matrix();findings();pipeline();audit()}
+const bars=(obj,color,total)=>Object.entries(obj).map(([k,v])=>`<div class="bar"><span>${esc(k.replace(/_/g," "))}</span><div><i style="width:${total?v/total*100:0}%;background:${typeof color==="function"?color(k):color}"></i></div><b>${v}</b></div>`).join("")||'<div class="muted small">None</div>';
+function overview(){const r=st.report,s=r.summary,h=s.hardening,ex=h.executables||0;
+  const hb=[["NX",h.nx],["PIE",h.pie],["Full RELRO",h.full_relro],["Stack canary",h.canary],["FORTIFY",h.fortify]];
+  const prof=r.format.entropy_profile||[];
+  const top=r.findings.filter(f=>f.risk_rating==="critical"||f.risk_rating==="high").slice(0,5);
+  $('[data-p=overview]').innerHTML=`
+  ${s.incomplete?'<div class="notice" style="margin:0 0 14px">⚠ Partial result: a quota or extraction limit was reached. See “Pipeline &amp; limits”.</div>':""}
+  <div class="grid2"><div><h3>Findings by risk</h3>${bars(Object.fromEntries(RISKS.map(k=>[k,s.findings_by_risk[k]])),k=>RCOL[k],s.findings)}
+   <h3 style="margin-top:18px">By category</h3>${bars(s.findings_by_category,"#b5651d",s.findings)}</div>
+   <div><h3>Hardening coverage (${ex} executables)</h3>${hb.map(([n,v])=>`<div class="bar"><span>${n}</span><div><i style="width:${ex?v/ex*100:0}%;background:${v===ex&&ex?"#5f7f4f":v?"#d4a017":"#b0432f"}"></i></div><b>${v}/${ex}</b></div>`).join("")}
+   <h3 style="margin-top:18px">Architectures</h3>${bars(s.architectures,"#7a5c3e",s.binaries)}</div></div>
+  <div class="grid2" style="margin-top:18px"><div><h3>Container &amp; entropy</h3><div class="kv"><b>Format</b><span>${esc(r.format.container)}</span><b>Signatures</b><span>${r.format.signatures.map(x=>esc(x.name)+" @0x"+x.offset.toString(16)).join(", ")||"none"}</span><b>Entropy</b><span>${r.format.entropy_bits_per_byte} bits/byte</span></div>
+   <div class="spark" title="Entropy profile of the input image (higher = compressed/encrypted)">${prof.map(v=>`<i style="height:${Math.max(3,v/8*100)}%" title="${v}"></i>`).join("")}</div></div>
+   <div><h3>Top findings</h3>${top.length?top.map(f=>`<div style="margin:6px 0"><span class="chip r-${f.risk_rating}">${f.risk_rating}</span> ${esc(f.title)} <span class="mono muted">${esc(f.binary)}</span></div>`).join(""):'<div class="muted small">No critical/high findings.</div>'}</div></div>`}
+
+function tree(){const files=st.report.inventory,fm={};files.forEach(f=>fm[f.path]=f);
+  const root={};files.forEach(f=>{let n=root;const parts=f.path.split("/").filter(Boolean);parts.forEach((p,i)=>{n=n[p]??={};if(i===parts.length-1)n.__f=f})});
+  const nf={};st.report.findings.forEach(f=>nf[f.binary]=(nf[f.binary]||0)+1);
+  const draw=(n,depth)=>Object.keys(n).filter(k=>k!=="__f").sort((a,b)=>(!!n[b].__f)-(!!n[a].__f)||a.localeCompare(b)).map(k=>{const c=n[k];
+    if(c.__f){const f=c.__f;return `<div class="leaf" data-name="${esc(f.path.toLowerCase())}"><span>📄</span><span class="mono">${esc(k)}</span>${f.elf?'<span class="tag">ELF</span>':""}${nf[f.path]?`<span class="tag f">${nf[f.path]} findings</span>`:""}<span class="sz">${fmt(f.size)}</span><span class="mono muted" title="${f.sha256}">${f.sha256.slice(0,12)}…</span></div>`}
+    return `<details ${depth<2?"open":""}><summary>📁 ${esc(k)}</summary>${draw(c,depth+1)}</details>`}).join("");
+  $('[data-p=tree]').innerHTML=`<div class="filters"><input id="tq" placeholder="Filter files…" style="min-width:240px"></div><div class="tree wrap">${draw(root,0)||'<div class="empty">No files</div>'}</div>`;
+  $("#tq").oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll(".leaf").forEach(l=>l.style.display=l.dataset.name.includes(q)?"":"none");if(q)document.querySelectorAll(".tree details").forEach(d=>d.open=true)}}
+
+const yn=v=>v===true?'<span class="y">Yes</span>':v===false?'<span class="n">No</span>':'<span class="u">?</span>';
+function matrix(){const rows=[...st.report.binaries],{k,d}=st.sort;
+  rows.sort((a,b)=>(a[k]>b[k]?1:a[k]<b[k]?-1:0)*d);
+  const sc=n=>`<span class="score ${n<=1?"low":n<=3?"mid":""}">${[1,2,3,4,5].map(i=>`<i class="${i<=n?"f":""}"></i>`).join("")}</span> ${n}/5`;
+  const th=(l,key)=>`<th data-k="${key}">${l}${st.sort.k===key?(d>0?" ▲":" ▼"):""}</th>`;
+  $('[data-p=matrix]').innerHTML=rows.length?`<div class="wrap"><table><thead><tr>${th("BINARY","path")}${th("ARCH","architecture")}<th>TYPE</th>${th("NX","nx")}${th("PIE","pie")}${th("RELRO","relro")}${th("CANARY","stack_canary")}${th("FORTIFY","fortify")}${th("STRIPPED","stripped")}${th("SCORE","hardening_score")}<th>RISK LEADS</th></tr></thead><tbody>
+  ${rows.map(b=>`<tr><td class="mono">${esc(b.path)}</td><td>${esc(b.architecture)} · ${b.bits}-bit · ${b.endianness}</td><td>${esc(b.kind)}</td><td>${yn(b.nx)}</td><td>${b.is_library?'<span class="u">n/a</span>':yn(b.pie)}</td><td>${b.relro==="full"?'<span class="y">full</span>':b.relro==="partial"?'<span style="color:#b07d10;font-weight:800">partial</span>':'<span class="n">none</span>'}</td><td>${yn(b.stack_canary)}</td><td>${yn(b.fortify)}</td><td>${b.stripped?"yes":"no"}</td><td>${sc(b.hardening_score)}</td><td class="mono">${esc(b.risk_leads.join(", "))}</td></tr>`).join("")}</tbody></table></div>`:'<div class="empty">No ELF binaries found in this image.</div>';
+  document.querySelectorAll("[data-p=matrix] th[data-k]").forEach(h=>h.onclick=()=>{st.sort={k:h.dataset.k,d:st.sort.k===h.dataset.k?-st.sort.d:1};matrix()})}
+
+function findings(){const r=st.report,cats=[...new Set(r.findings.map(f=>f.category))],fl=st.fl;
+  const list=r.findings.filter(f=>(!fl.risk||f.risk_rating===fl.risk)&&(!fl.cat||f.category===fl.cat)&&(!fl.q||(f.title+f.binary+f.cwe).toLowerCase().includes(fl.q.toLowerCase())));
+  $('[data-p=findings]').innerHTML=`<div class="filters"><select id="fr"><option value="">All risks</option>${RISKS.map(x=>`<option ${fl.risk===x?"selected":""}>${x}</option>`).join("")}</select>
+   <select id="fc"><option value="">All categories</option>${cats.map(x=>`<option ${fl.cat===x?"selected":""} value="${x}">${x.replace(/_/g," ")}</option>`).join("")}</select>
+   <input id="fq" placeholder="Search title / path / CWE" value="${esc(fl.q)}"><span class="small muted" style="align-self:center">${list.length} of ${r.findings.length}</span></div>
+   <div class="wrap">${list.map(f=>`<details class="find"><summary><span class="chip r-${f.risk_rating}">${f.risk_rating}</span><span class="ti">${esc(f.title)}</span><span class="mono muted">${esc(f.cwe)}</span></summary>
+   <div class="bd"><p>${esc(f.description)}</p><div class="kv"><b>File</b><span class="mono">${esc(f.binary)}</span><b>CWE</b><span>${esc(f.cwe)} — ${esc(f.cwe_name)}</span><b>Category</b><span>${esc(f.category)}</span><b>Confidence</b><span>${esc(f.confidence)}</span>
+   ${f.architecture?`<b>Architecture</b><span>${esc(f.architecture)}</span>`:""}${f.sink?`<b>Sink</b><span class="mono">${esc(f.sink)}</span>`:""}${f.source?`<b>Source</b><span class="mono">${esc(f.source)}</span>`:""}
+   <b>Evidence</b><span class="mono">${esc(f.evidence_ref)}${f.redacted?" · value redacted":""}</span><b>Detected</b><span>${when(f.detected_at)}</span>
+   <b>Triage</b><span><select data-v="${f.vulnerability_id}">${["new","triaged","validated","false_positive"].map(x=>`<option ${f.status===x?"selected":""}>${x}</option>`).join("")}</select></span></div></div></details>`).join("")||'<div class="empty">No findings match.</div>'}</div>`;
+  $("#fr").onchange=e=>{st.fl.risk=e.target.value;findings()};$("#fc").onchange=e=>{st.fl.cat=e.target.value;findings()};
+  $("#fq").oninput=e=>{st.fl.q=e.target.value;const p=e.target.selectionStart;findings();const q=$("#fq");q.focus();q.setSelectionRange(p,p)};
+  document.querySelectorAll("select[data-v]").forEach(s=>s.onchange=async()=>{try{await api(`/api/v1/firmware/${st.sel}/vulnerabilities/${s.dataset.v}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:s.value})});
+    st.report.findings.find(f=>f.vulnerability_id===s.dataset.v).status=s.value;toast("Triage status saved.");audit()}catch(e){toast(e.message,1)}})}
+
+function pipeline(){const r=st.report,lab={done:"done",partial:"partial",not_implemented:"not in this build"};
+  $('[data-p=pipeline]').innerHTML=`<h3>Pipeline stages</h3>${r.stages.map(s=>`<div class="stage"><span class="chip t-${s.status}">${lab[s.status]||s.status}</span><div class="d"><b>${esc(s.label)}</b><br><small>${esc(s.detail||"")}</small></div><small>${s.duration_ms} ms</small></div>`).join("")}
+   <h3 style="margin-top:18px">Scope &amp; known limitations</h3><ul class="lim">${r.limitations.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>
+   <h3 style="margin-top:18px">Safety controls</h3><ul class="lim"><li>No binary is executed or emulated · no network egress required.</li><li>Archive members are written as data only (no symlinks, no path traversal), then deleted after analysis.</li><li>Secrets are stored only as keyed HMAC fingerprints; raw values are never persisted.</li><li>Size, file-count and wall-clock quotas apply to every job.</li></ul>`}
+
+async function audit(){const box=$('[data-p=audit]');
+  try{const {events}=await api(`/api/v1/firmware/${st.sel}/audit`);
+  box.innerHTML=`<div class="filters"><button class="btn quiet" id="vfy">Verify audit chain</button><span class="small muted" id="vres"></span></div><div class="wrap"><table><thead><tr><th>TIME</th><th>ACTION</th><th>DETAILS</th><th>ENTRY HASH</th></tr></thead><tbody>${events.map(e=>`<tr><td>${when(e.timestamp)}</td><td>${esc(e.action)}</td><td class="mono">${esc(JSON.stringify(e.details))}</td><td class="mono" title="${e.entry_hash}">${e.entry_hash.slice(0,16)}…</td></tr>`).join("")}</tbody></table></div>`;
+  $("#vfy").onclick=async()=>{const v=await api("/api/v1/audit/verify");$("#vres").innerHTML=v.valid?`<span class="y">✔ Chain intact (${v.entries} entries)</span>`:`<span class="n">✖ Tamper detected at entry ${v.broken_at}</span>`}}catch(e){box.innerHTML='<div class="empty">Audit log unavailable.</div>'}}
+
+$("#tabs").onclick=e=>{const b=e.target.closest(".tab");if(!b)return;st.tab=b.dataset.t;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.dataset.p===st.tab))};
+$("#jobs").onclick=e=>{const j=e.target.closest(".job");if(j)select(j.dataset.id)};
+
+function saveBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
+$("#dl").onclick=async()=>{if(!st.sel)return;const b=$("#dl");b.disabled=true;
+  try{const r=await fetch(`/api/v1/firmware/${st.sel}/report?download=true`);if(!r.ok)throw new Error("Report not available ("+r.status+")");
+    saveBlob(await r.blob(),`firmwarex-${st.sel}.json`);toast("JSON report downloaded.")}catch(e){toast(e.message,1)}finally{b.disabled=false}};
+const csvCell=v=>{let s=String(v??"");if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
+$("#csv").onclick=()=>{if(!st.report)return;
+  const cols=["risk","confidence","category","cwe","title","file","sink","source","evidence","status"];
+  const rows=st.report.findings.map(f=>[f.risk_rating,f.confidence,f.category,f.cwe,f.title,f.binary,f.sink,f.source,f.evidence_ref,f.status]);
+  const text="\ufeff"+[cols,...rows].map(r=>r.map(csvCell).join(",")).join("\r\n");
+  saveBlob(new Blob([text],{type:"text/csv;charset=utf-8"}),`firmwarex-${st.sel}-findings.csv`);toast("CSV exported.")};
+$("#refresh").onclick=jobs;
+$("#file").onchange=e=>{$("#dropLabel").textContent=e.target.files[0]?e.target.files[0].name:"Choose or drop a file"};
+const drop=$("#drop");["dragover","dragenter"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>{if(e.dataTransfer.files.length){$("#file").files=e.dataTransfer.files;$("#dropLabel").textContent=e.dataTransfer.files[0].name}});
+$("#upload").onclick=async()=>{const f=$("#file").files[0];if(!f)return toast("Choose a firmware file first.",1);if(!$("#auth").checked)return toast("Please confirm you are authorised to analyse this image.",1);
+  const fd=new FormData();fd.append("file",f);fd.append("authorized","true");$("#upload").disabled=true;
+  try{const r=await api("/api/v1/firmware/upload",{method:"POST",body:fd});toast("Upload accepted — analysing…");$("#file").value="";$("#dropLabel").textContent="Choose or drop a file";await select(r.firmware_id)}catch(e){toast(e.message,1)}finally{$("#upload").disabled=false}};
+$("#sample").onclick=async()=>{$("#sample").disabled=true;try{const r=await api("/api/v1/samples",{method:"POST"});toast("Demo analysis started.");await select(r.firmware_id)}catch(e){toast(e.message,1)}finally{$("#sample").disabled=false}};
+api("/api/v1/health").then(h=>$("#maxMb").textContent=Math.round(h.max_upload_bytes/1048576)).catch(()=>{});
+jobs();
+</script>
+</body>
+</html>
